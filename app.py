@@ -2,50 +2,54 @@ from flask import Flask, render_template, jsonify, request
 
 app = Flask(__name__)
 
-import requests
-from bs4 import BeautifulSoup
+all_movie_star = [
+    {
+        'name': '공유',
+        'img_url': 'https://search.pstatic.net/common/?src=https%3A%2F%2Fssl.pstatic.net%2Fsstatic%2Fpeople%2F76%2F201706081735556361.jpg&type=u77_96&quality=95',
+        'recent': '서복',
+        'url': 'https://movie.naver.com/movie/bi/pi/basic.nhn?code=8090',
+        'like': 0
+    },
+    {
+        'name': '김고은',
+        'img_url': 'https://search.pstatic.net/common/?src=https%3A%2F%2Fssl.pstatic.net%2Fsstatic%2Fpeople%2Fportrait%2F201801%2F20180118105906522.jpg&type=u77_96&quality=95',
+        'recent': '서복',
+        'url': 'https://movie.naver.com/movie/bi/pi/basic.nhn?code=297957',
+        'like': 0
+    }
+]
 
-articles = []
 
-
-## HTML을 주는 부분
+# HTML 화면 보여주기
 @app.route('/')
 def home():
     return render_template('index.html')
 
 
-@app.route('/memo', methods=['GET'])
-def listing():
-    return jsonify({'all_articles': articles})
+# API 역할을 하는 부분
+@app.route('/api/list', methods=['GET'])
+def show_stars():
+    all_movie_star.sort(key=lambda x: x["like"], reverse=True)
+    return jsonify({'movie_stars': all_movie_star})
 
 
-## API 역할을 하는 부분
-@app.route('/memo', methods=['POST'])
-def saving():
-    url_receive = request.form['url_give']
-    comment_receive = request.form['comment_give']
+@app.route('/api/like', methods=['POST'])
+def like_star():
+    name_receive = request.form['name_give']
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36'}
-    data = requests.get(url_receive, headers=headers)
+    target_star = [actor for actor in all_movie_star if actor["name"] == name_receive][0]
+    target_star['like'] += 1
 
-    soup = BeautifulSoup(data.text, 'html.parser')
+    return jsonify({'msg': '좋아요 완료!'})
 
-    title = soup.select_one('meta[property="og:title"]')['content']
-    image = soup.select_one('meta[property="og:image"]')['content']
-    desc = soup.select_one('meta[property="og:description"]')['content']
 
-    doc = {
-        'title': title,
-        'image': image,
-        'desc': desc,
-        'url': url_receive,
-        'comment': comment_receive
-    }
-
-    articles.append(doc)
-
-    return jsonify({'msg': '저장이 완료되었습니다!'})
+@app.route('/api/delete', methods=['POST'])
+def delete_star():
+    name_receive = request.form['name_give']
+    for actor in all_movie_star:
+        if actor["name"] == name_receive:
+            del actor
+    return jsonify({'msg': '삭제 완료!'})
 
 
 if __name__ == '__main__':
